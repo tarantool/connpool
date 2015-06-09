@@ -1,0 +1,4 @@
+*.snap
+*.xlog
+*.log
+test/var

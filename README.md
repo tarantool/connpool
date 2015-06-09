@@ -1,4 +1,4 @@
-# connection-pool
+# Connection-pool
 Lua connection pool for tarantool net.box
 
 ###api
