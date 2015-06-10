@@ -8,6 +8,7 @@ local yaml = require('yaml')
 
 local servers = {}
 local servers_n = 0
+local zones_n = 0
 
 local REMOTE_TIMEOUT = 500
 local HEARTBEAT_TIMEOUT = 500
@@ -46,6 +47,14 @@ local function on_disconnect_one(srv)
     log.info("kill %s by dead timeout", srv.uri)
 end
 
+local function on_disconnect_zone(name)
+    log.info("zone %s has no active connections", name)
+end
+
+local function on_disconnect()
+    log.info("there is no active connections")
+end
+
 local function on_init()
     log.info('started')
 end
@@ -55,11 +64,30 @@ local function server_is_ok(srv, dead)
     return not srv.ignore and (srv.conn:is_connected() or dead)
 end
 
-local function all(include_dead)
+local function merge_zones()
+    local all_zones = {}
+    i = 1
+    for _, zone in pairs(servers) do
+        for _, server in pairs(zone.list) do
+            all_zones[i] = server
+            i = i + 1
+        end
+    end
+    return all_zones
+end
+
+local function all(zone_id, include_dead)
     local res = {}
     local k = 1
-    for i = 1, servers_n do
-        local srv = servers[i]
+    local zone
+
+    if zone_id ~= nil then
+        zone = servers[zone_id]
+    else
+        zone = { list=merge_zones() }
+    end
+
+    for _, srv in pairs(zone.list) do
         if server_is_ok(srv, include_dead) then
             res[k] = srv
             k = k + 1
@@ -68,9 +96,37 @@ local function all(include_dead)
     return res
 end
 
-local function one(include_dead)
-    local active_list = all(include_dead)
+local function one(zone_id, include_dead)
+    local active_list = all(zone_id, include_dead)
     return active_list[math.random(#active_list)]
+end
+
+local function zone_list()
+    local names = {}
+    local i = 1
+    for z_name, _ in pairs(servers) do
+        names[i] = z_name
+        i = i + 1
+    end
+    return names
+end
+
+local function _on_disconnect(srv)
+    pool_obj.on_disconnect_one(srv)
+
+    -- check zone and pool
+    local d = 0
+    local all_zones = zone_list()
+    for _, name in pairs(all_zones) do
+        local alive = all(name)
+        if #alive == 0 then
+            pool_obj.on_disconnect_zone(name)
+            d = d + 1
+        end
+    end
+    if d == #all_zones then
+        pool_obj.on_disconnect()
+    end
 end
 
 local function monitor_fiber()
@@ -78,7 +134,7 @@ local function monitor_fiber()
     local i = 0
     while true do
         i = i + 1
-        local server = one(true)
+        local server = one(nil, true)
         local uri = server.uri
         local dead = false
         for k, v in pairs(heartbeat_state) do
@@ -99,11 +155,11 @@ local function monitor_fiber()
         end
 
         if dead then
-            pool_obj.on_disconnect_one(server)
             server.conn:close()
             server.ignore = true
             heartbeat_state[uri] = nil
             epoch_counter = epoch_counter + 1
+            pool_obj._on_disconnect(server)
         end
         fiber.sleep(math.random(100)/1000)
     end
@@ -128,10 +184,12 @@ local function merge_tables(response)
 end
 
 local function monitor_fail(uri)
-    for i, server in pairs(servers) do
-        if server.uri == uri then 
-            pool_obj.on_connfail(server)
-            break
+    for _, zone in pairs(servers) do
+        for _, server in pairs(zone.list) do
+            if server.uri == uri then
+                pool_obj.on_connfail(server)
+                break
+            end
         end
     end
 end
@@ -158,7 +216,7 @@ local function heartbeat_fiber()
     while true do
         i = i + 1
         -- random select node to check
-        local server = one(true)
+        local server = one(nil, true)
         local uri = server.uri
         log.debug("checking %s", uri)
 
@@ -174,33 +232,6 @@ local function heartbeat_fiber()
         -- randomized wait for next check
         fiber.sleep(math.random(1000)/1000)
     end
-end
-
--- base remote operation call
-local function single_call(self, space, server, operation, ...)
-    result = nil
-    local status, reason = pcall(function(...)
-        self = server.conn:timeout(5 * REMOTE_TIMEOUT).space[space]
-        result = self[operation](self, ...)
-    end, ...)
-    if not status then
-        log.error('failed to %s on %s: %s', operation, server.uri, reason)
-        if not server.conn:is_connected() then
-            log.error("server %s is offline", server.uri)
-        end
-    end
-    return result
-end
-
--- pool request function
-local function request(self, space, operation, tuple_id, ...)
-    local result = {}
-    k = 1
-    for i, server in ipairs(servers) do
-        result[k] = single_call(self, space, server, operation, ...)
-        k = k + 1
-    end
-    return result
 end
 
 -- function to check a connection after it's established
@@ -250,15 +281,12 @@ local function get_heartbeat()
 end
 
 local function enable_operations()
-    -- set base operations
-    pool_obj.single_call = single_call
-    pool_obj.request = request
-
     -- set helpers
     pool_obj.get_heartbeat = get_heartbeat
 end
 
 local function connect(id, server)
+    local zone = servers[server.zone]
     local conn
     log.info(' - %s - connecting...', server.uri)
     while true do
@@ -270,8 +298,8 @@ local function connect(id, server)
                 login=server.login, password=server.password,
                 id = id
             }
-            servers_n = servers_n + 1
-            servers[servers_n] = srv
+            zone.n = zone.n + 1
+            zone.list[zone.n] = srv
             pool_obj.on_connected_one(srv)
             if conn:eval("return box.info.server.uuid") == box.info.server.uuid then
                 self_server = srv
@@ -290,7 +318,18 @@ local function init(cfg)
     log.info('establishing connection to cluster servers...')
 
     servers_n = 0
+    zones_n = 0
     for id, server in pairs(cfg.servers) do
+        servers_n = servers_n + 1
+        local zone_name = server.zone
+        if zone_name == nil then
+            zone_name = 'default'
+        end
+        if servers[zone_name] == nil then
+            zones_n = zones_n + 1
+            servers[zone_name] = { id = zones_n, n = 0, list = {} }
+        end
+
         connect(id, server)
     end
     pool_obj.on_connected()
@@ -338,7 +377,7 @@ pool_obj = {
     DEAD_TIMEOUT = DEAD_TIMEOUT,
     RECONNECT_AFTER = RECONNECT_AFTER,
 
-    servers = servers,
+    zones = servers,
     len = len,
     is_connected = is_connected,
     wait_connection = wait_connection,
@@ -347,14 +386,18 @@ pool_obj = {
     is_table_filled = is_table_filled,
     wait_table_fill = wait_table_fill,
     init = init,
+    _on_disconnect = _on_disconnect,
     on_connfail = on_connfail,
     on_connected = on_connected,
     on_connected_one = on_connected_one,
     on_disconnect_one = on_disconnect_one,
+    on_disconnect_zone = on_disconnect_zone,
+    on_disconnect = on_disconnect,
     on_init = on_init,
 
     all = all,
     one = one,
+    zone_list = zone_list,
 }
 
 return pool_obj

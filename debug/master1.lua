@@ -4,8 +4,14 @@ yaml = require('yaml')
 
 local cfg = {
     servers = {
-        { uri = 'localhost:3313', login = 'tester', password = 'pass', binary = 3313 };
-        { uri = 'localhost:3314', login = 'tester', password = 'pass', binary = 3314 };
+        {
+            uri = 'localhost:3313', login = 'tester',
+            password = 'pass', zone = '0'
+        };
+        {
+            uri = 'localhost:3314', login = 'tester',
+            password = 'pass', zone = '1'
+        };
     };
 }
 
