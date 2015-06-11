@@ -15,6 +15,7 @@ if `zone_id` is nil - return connections from all zones
 * `on_disconnect_one` - one node disconnect
 * `on_disconnect_zone` - all nodes in zone disconnected
 * `on_connfail` - monitoring detected connection problem
+* `on_init` - init complete, monitoring fibers started
 
 ###configuration
 global:
