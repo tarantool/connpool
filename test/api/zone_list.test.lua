@@ -3,10 +3,10 @@
 --# start server master1
 --# start server master2
 --# set connection default
-pool.wait_connection()
-pool.wait_table_fill()
+pool:wait_connection()
+pool:wait_table_fill()
 
-pool.zone_list()
+pool:zone_list()
 
 --# stop server master1
 --# cleanup server master1

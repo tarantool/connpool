@@ -3,37 +3,37 @@
 --# start server master1
 --# start server master2
 --# set connection default
-pool.wait_connection()
+pool:wait_connection()
 --shard.wait_epoch(3)
-pool.wait_table_fill()
-pool.is_table_filled()
+pool:wait_table_fill()
+pool:is_table_filled()
 
 --# set connection master1
-pool.wait_table_fill()
-pool.is_table_filled()
+pool:wait_table_fill()
+pool:is_table_filled()
 
 --# set connection master2
-pool.wait_table_fill()
-pool.is_table_filled()
+pool:wait_table_fill()
+pool:is_table_filled()
 
 --# set connection default
 
-servers = pool.all()
+servers = pool:all()
 #servers
 
 -- Kill server and wait for monitoring fibers kill
 --# stop server master1
 
 -- Check that node is removed from shard
-pool.wait_epoch(2)
-pool.is_table_filled()
+pool:wait_epoch(2)
+pool:is_table_filled()
 
 --# set connection master2
-pool.wait_epoch(2)
-pool.is_table_filled()
+pool:wait_epoch(2)
+pool:is_table_filled()
 --# set connection default
 
-servers = pool.all()
+servers = pool:all()
 #servers
 
 --# stop server master2

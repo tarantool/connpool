@@ -3,14 +3,14 @@
 --# start server master1
 --# start server master2
 --# set connection default
-pool.wait_connection()
-pool.wait_table_fill()
+pool:wait_connection()
+pool:wait_table_fill()
 
-server = pool.one()
+server = pool:one()
 type(server)
 type(server.conn)
 
-from_zone = pool.one('myzone1')
+from_zone = pool:one('myzone1')
 from_zone.uri
 
 --# stop server master1

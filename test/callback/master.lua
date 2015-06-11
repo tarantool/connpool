@@ -1,10 +1,11 @@
 #!/usr/bin/env tarantool
-pool = require('pool')
+lib_pool = require('pool')
 log = require('log')
 os = require('os')
 fiber = require('fiber')
 
 local cfg = {
+    pool_name = 'mypool';
     servers = {
         { 
             uri = 'localhost:33130', login = 'tester', 
@@ -40,39 +41,40 @@ i = 1
 j = 1
 results = {}
 d_results = {}
+pool = lib_pool.new()
 
-pool.on_init = function()
+pool.on_init = function(self)
     results[i] = 'init complete'
     i = i + 1
 end
 
-pool.on_connected_one = function(srv)
+pool.on_connected_one = function(self, srv)
     results[i] = 'server connected'
     i = i + 1
 end
 
-pool.on_connected = function()
+pool.on_connected = function(self)
     results[i] = 'all nodes connected'
     i = i + 1
 end
 
-pool.on_disconnect_one = function(srv)
+pool.on_disconnect_one = function(self, srv)
     d_results[j] = 'server disconnected'
     j = j + 1
 end
 
-pool.on_disconnect_zone = function(name)
+pool.on_disconnect_zone = function(self, name)
     d_results[j] = 'zone ' .. name ..' disconnected'
     j = j + 1
 end
 
-pool.on_connfail = function(srv)
+pool.on_connfail = function(self, srv)
     d_results[j] = 'server ' .. srv.uri .. ' connection fail'
     j = j + 1
 end
 
 -- init
 fiber.create(function()
-    pool.init(cfg)
+    pool:init(cfg)
 end)
 

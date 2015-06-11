@@ -3,15 +3,15 @@
 --# start server master1
 --# start server master2
 --# set connection default
-pool.wait_connection()
+pool:wait_connection()
 
 -- monitoring test
-pool.wait_table_fill()
-pool.is_table_filled()
+pool:wait_table_fill()
+pool:is_table_filled()
 
 --# set connection master1
-pool.wait_table_fill()
-pool.is_table_filled()
+pool:wait_table_fill()
+pool:is_table_filled()
 
 --# set connection default
 

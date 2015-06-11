@@ -4,8 +4,8 @@
 --# start server master2
 --# set connection default
 
-pool.wait_connection()
-pool.wait_table_fill()
+pool:wait_connection()
+pool:wait_table_fill()
 results
 
 --# stop server master1

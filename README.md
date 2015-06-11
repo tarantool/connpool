@@ -6,6 +6,7 @@ Lua connection pool for tarantool net.box with network zones support.
 * `pool:one(zone_id)`  - returns random active connection from given zone(can be nil)
 * `pool:all(zone_id)`  - returns all active connections from given zone(can be nil)
 * `pool:zone_list()` - returns list of network zones ids
+* `pool:get_heartbeat()` - returns monitoring state
 
 if `zone_id` is nil - return connections from all zones
 
@@ -20,8 +21,9 @@ if `zone_id` is nil - return connections from all zones
 
 ###configuration
 global:
+* `pool_name` - connection pool id
 * `monitor` - enable connection monitoring(by default `true`)
-* `server` - table with servers settings
+* `servers` - table with servers settings
 
 servers:
 * `uri` - server uri with port
@@ -31,14 +33,18 @@ servers:
 
 ###example
 ```lua
-pool = require('pool')
+p = require('pool')
+
+-- create new pool
+pool = p.new()
 -- set callback
-pool.on_connected = function()
+pool.on_connected = function(self)
     log.info('hello world')
 end
 
 -- config with 2 nodes in 2 zones and monitoring
 local cfg = {
+    pool_name = 'mypool';
     servers = {
         {
             uri = 'localhost:3313', login = 'tester',

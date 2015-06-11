@@ -1,9 +1,10 @@
 #!/usr/bin/env tarantool
-pool = require('pool')
+lib_pool = require('pool')
 os = require('os')
 fiber = require('fiber')
 
 local cfg = {
+    pool_name = 'mypool';
     servers = {
         { 
             uri = 'localhost:33130', login = 'tester', 
@@ -35,7 +36,9 @@ pcall(function()
   box.schema.user.grant('tester', 'read,write,execute', 'universe')
 end)
 
+pool = lib_pool.new()
+
 -- init
 fiber.create(function()
-    pool.init(cfg)
+    pool:init(cfg)
 end)

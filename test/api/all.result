@@ -3,20 +3,20 @@
 --# start server master1
 --# start server master2
 --# set connection default
-pool.wait_connection()
+pool:wait_connection()
 ---
 ...
-pool.wait_table_fill()
+pool:wait_table_fill()
 ---
 ...
-servers = pool.all()
+servers = pool:all()
 ---
 ...
 #servers
 ---
 - 3
 ...
-zone = pool.all('myzone1')
+zone = pool:all('myzone1')
 ---
 ...
 #zone

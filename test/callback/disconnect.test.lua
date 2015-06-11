@@ -4,11 +4,11 @@
 --# start server master2
 --# set connection default
 
-pool.wait_connection()
-pool.wait_table_fill()
+pool:wait_connection()
+pool:wait_table_fill()
 
 --# stop server master1
-pool.wait_epoch(2)
+pool:wait_epoch(2)
 d_results
 
 --# cleanup server master1
