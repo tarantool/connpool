@@ -1,4 +1,6 @@
 *.snap
 *.xlog
 *.log
+test/lib/*.pyc
+test/lib/*/*.pyc
 test/var
