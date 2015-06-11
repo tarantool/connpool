@@ -41,6 +41,7 @@ i = 1
 j = 1
 results = {}
 d_results = {}
+fails = 0
 pool = lib_pool.new()
 
 pool.on_init = function(self)
@@ -69,8 +70,7 @@ pool.on_disconnect_zone = function(self, name)
 end
 
 pool.on_connfail = function(self, srv)
-    d_results[j] = 'server ' .. srv.uri .. ' connection fail'
-    j = j + 1
+    fails = fails + 1
 end
 
 -- init

@@ -10,6 +10,7 @@ pool:wait_table_fill()
 --# stop server master1
 pool:wait_epoch(2)
 d_results
+fails >= pool.DEAD_TIMEOUT
 
 --# cleanup server master1
 --# stop server master2

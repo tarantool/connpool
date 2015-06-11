@@ -15,18 +15,12 @@ pool:wait_epoch(2)
 ...
 d_results
 ---
-- - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server localhost:33131 connection fail
-  - server disconnected
+- - server disconnected
   - zone myzone2 disconnected
+...
+fails >= pool.DEAD_TIMEOUT
+---
+- true
 ...
 --# cleanup server master1
 --# stop server master2
