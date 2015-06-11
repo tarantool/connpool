@@ -1,4 +1,6 @@
-# Connection-pool
+# Connection-pool 
+[![Build Status](https://travis-ci.org/tarantool/connection-pool.svg?branch=master)](https://travis-ci.org/tarantool/connection-pool)
+
 Lua connection pool for tarantool net.box with network zones support.
 
 ###api
