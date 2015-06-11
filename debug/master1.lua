@@ -1,8 +1,9 @@
-pool = require('pool')
+lib_pool = require('pool')
 log = require('log')
 yaml = require('yaml')
 
 local cfg = {
+    pool_name = 'mypool';
     servers = {
         {
             uri = 'localhost:3313', login = 'tester',
@@ -29,11 +30,13 @@ box.cfg {
 box.schema.user.create('tester', { password = 'pass' })
 box.schema.user.grant('tester', 'read,write,execute', 'universe')
 
--- init shards
-pool.init(cfg)
+pool = lib_pool.new()
+
+-- init connections
+pool:init(cfg)
 
 -- wait for operations
 require('fiber').sleep(3)
 
 -- show results
-log.info('Len=%d', #pool.all())
+log.info('Len=%d', #pool:all())
