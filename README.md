@@ -61,6 +61,6 @@ local cfg = {
 }
 
 -- start
-pool.init(cfg)
+pool:init(cfg)
 ```
 if there is no zone specified - all servers are in single zone
