@@ -283,12 +283,18 @@ local function connect(self, id, server)
     local conn
     log.info(' - %s - connecting...', server.uri)
     while true do
-        local uri = server.login..':'..server.password..'@'..server.uri
+        local login = server.login
+        local pass = server.password
+        if login == nil or pass == nil then
+            login = self.configuration.login
+            pass = self.configuration.password
+        end
+        local uri = login .. ':' .. pass .. '@' .. server.uri
         conn = remote:new(uri, { reconnect_after = self.RECONNECT_AFTER })
         if conn:ping() and self:check_connection(conn) then
             local srv = {
                 uri = server.uri, conn = conn,
-                login=server.login, password=server.password,
+                login=login, password=pass,
                 id = id
             }
             zone.n = zone.n + 1
@@ -308,6 +314,10 @@ end
 -- connect with servers
 local function init(self, cfg)
     self.configuration = cfg
+    -- check default pool name
+    if self.configuration.pool_name == nil then
+        self.configuration.pool_name = 'default'
+    end
     log.info('establishing connection to cluster servers...')
     self.servers_n = 0
     self.zones_n = 0
