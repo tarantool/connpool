@@ -5,6 +5,7 @@ sudo apt-get -q -y install tarantool tarantool-dev
 
 git submodule update --init --recursive
 sudo pip install -r test-run/requirements.txt
+sudo pip install PyYAML
 sudo pip install git+https://github.com/tarantool/tarantool-python.git
 make test-force
 
