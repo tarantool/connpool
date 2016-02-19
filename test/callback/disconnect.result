@@ -1,5 +1,5 @@
---# create server master1 with script='callback/master1.lua', lua_libs='callback/lua/pool.lua'
---# create server master2 with script='callback/master2.lua', lua_libs='callback/lua/pool.lua'
+--# create server master1 with script='callback/master1.lua', lua_libs='callback/lua/connpool.lua'
+--# create server master2 with script='callback/master2.lua', lua_libs='callback/lua/connpool.lua'
 --# start server master1
 --# start server master2
 --# set connection default

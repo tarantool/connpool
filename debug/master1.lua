@@ -1,4 +1,4 @@
-lib_pool = require('pool')
+lib_pool = require('connpool')
 log = require('log')
 yaml = require('yaml')
 

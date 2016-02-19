@@ -1,12 +1,12 @@
-package = 'pool'
+package = 'connpool'
 version = 'scm-1'
 source  = {
-    url    = 'git://github.com/tarantool/connection-pool.git',
+    url    = 'git://github.com/tarantool/connpool.git',
     branch = 'master',
 }
 description = {
     summary  = "Net box connection pool for Tarantool",
-    homepage = 'https://github.com/tarantool/connection-pool.git',
+    homepage = 'https://github.com/tarantool/connpool.git',
     license  = 'BSD',
 }
 dependencies = {
@@ -16,7 +16,7 @@ build = {
     type = 'builtin',
 
     modules = {
-        ['pool'] = 'pool.lua'
+        ['connpool'] = 'connpool.lua'
     }
 }
 

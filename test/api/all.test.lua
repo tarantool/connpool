@@ -1,5 +1,5 @@
---# create server master1 with script='api/master1.lua', lua_libs='api/lua/pool.lua'
---# create server master2 with script='api/master2.lua', lua_libs='api/lua/pool.lua'
+--# create server master1 with script='api/master1.lua', lua_libs='api/lua/connpool.lua'
+--# create server master2 with script='api/master2.lua', lua_libs='api/lua/connpool.lua'
 --# start server master1
 --# start server master2
 --# set connection default

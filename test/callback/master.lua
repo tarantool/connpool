@@ -1,5 +1,5 @@
 #!/usr/bin/env tarantool
-lib_pool = require('pool')
+lib_pool = require('connpool')
 log = require('log')
 os = require('os')
 fiber = require('fiber')
