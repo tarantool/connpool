@@ -1,0 +1,5 @@
+tarantool-connpool/
+files
+stamp-*
+*.substvars
+*.log

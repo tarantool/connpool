@@ -32,7 +32,7 @@ box.cfg {
 
 require('console').listen(os.getenv('ADMIN'))
 
-pcall(function()
+box.once("bootstrap", function()
   box.schema.user.create('tester', { password = 'pass'})
   box.schema.user.grant('tester', 'read,write,execute', 'universe')
 end)

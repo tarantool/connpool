@@ -5,3 +5,4 @@
 test/lib/*.pyc
 test/lib/*/*.pyc
 test/var
+VERSION
