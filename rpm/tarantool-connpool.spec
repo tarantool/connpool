@@ -11,11 +11,14 @@ BuildRequires: tarantool >= 1.6.8.0
 Requires: tarantool >= 1.6.8.0
 
 # For tests
-%if (0%{?fedora} >= 22 || 0%{?rhel} >= 7)
+%if (0%{?fedora} >= 22)
 BuildRequires: python >= 2.7
 BuildRequires: python-six >= 1.9.0
 BuildRequires: python-gevent >= 1.0
 BuildRequires: python-yaml >= 3.0.9
+# Temporary for old test-run
+# https://github.com/tarantool/connpool/issues/1
+BuildRequires: python-daemon
 %endif
 
 %description
@@ -25,7 +28,7 @@ Lua connection pool for tarantool net.box with network zones support.
 %setup -q -n connpool-%{version}
 
 %check
-%if (0%{?fedora} >= 22 || 0%{?rhel} >= 7)
+%if (0%{?fedora} >= 22)
 make test
 %endif
 
