@@ -9,7 +9,6 @@ env:
       - PACK=none
       - OS=el DIST=6 PACK=rpm
       - OS=el DIST=7 PACK=rpm
-      - OS=fedora DIST=23 PACK=rpm
       - OS=fedora DIST=24 PACK=rpm
       - OS=fedora DIST=25 PACK=rpm
 #      - OS=fedora DIST=rawhide PACK=rpm
