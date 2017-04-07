@@ -31,6 +31,7 @@ results
 - - server connected
   - server connected
   - server connected
+  - all nodes connected
   - init complete
 ...
 _ = test_run:cmd("stop server master1")

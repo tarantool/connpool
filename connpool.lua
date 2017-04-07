@@ -10,9 +10,9 @@ local DEAD_TIMEOUT = 10
 local INFINITY_MIN = -1
 local RECONNECT_AFTER = msgpack.NULL
 
-obj_count = 1
-pool_table = {}
+local pool_table = {}
 
+-- intentionally made global. this needs to be redone
 -- heartbeat monitoring function
 function heartbeat(pool_id)
     log.debug('ping to %s', pool_id)
@@ -55,7 +55,7 @@ end
 
 local function merge_zones(self)
     local all_zones = {}
-    i = 1
+    local i = 1
     for _, zone in pairs(self.servers) do
         for _, server in pairs(zone.list) do
             all_zones[i] = server
@@ -148,7 +148,7 @@ local function monitor_fiber(self)
             server.ignore = true
             self.heartbeat_state[uri] = nil
             self.epoch_counter = self.epoch_counter + 1
-            self:_on_disconnect(server)
+            _on_disconnect(self, server)
         end
         fiber.sleep(math.random(100)/1000)
     end
@@ -213,8 +213,7 @@ local function heartbeat_fiber(self)
         local response
         local status, err_state = pcall(function()
             local expr = "return heartbeat('" .. self.configuration.pool_name .. "')"
-            response = server.conn:timeout(
-                self.HEARTBEAT_TIMEOUT):eval(expr)
+            response = server.conn:timeout(self.HEARTBEAT_TIMEOUT):eval(expr)
         end)
         -- update local heartbeat table
         self:update_heartbeat(uri, response, status)
@@ -259,8 +258,8 @@ local function fill_table(self)
         self.heartbeat_state[server.uri] = {}
         for _, lserver in pairs(self.configuration.servers) do
             self.heartbeat_state[server.uri][lserver.uri] = {
-                try= 0,         
-                ts=INFINITY_MIN
+                try = 0,
+                ts  = INFINITY_MIN,
             }
         end
     end
@@ -278,7 +277,6 @@ end
 
 local function connect(self, id, server)
     local zone = self.servers[server.zone]
-    local conn
     log.info(' - %s - connecting...', server.uri)
     while true do
         local login = server.login
@@ -287,12 +285,12 @@ local function connect(self, id, server)
             login = self.configuration.login
             pass = self.configuration.password
         end
-        local uri = login .. ':' .. pass .. '@' .. server.uri
-        conn = remote:new(uri, { reconnect_after = self.RECONNECT_AFTER })
+        local uri = string.format("%s:%s@%s", login, pass, server.uri)
+        local conn = remote:new(uri, { reconnect_after = self.RECONNECT_AFTER })
         if conn:ping() and self:check_connection(conn) then
             local srv = {
                 uri = server.uri, conn = conn,
-                login=login, password=pass,
+                login = login, password=pass,
                 id = id
             }
             zone.n = zone.n + 1
@@ -327,7 +325,7 @@ local function init(self, cfg)
         end
         if self.servers[zone_name] == nil then
             self.zones_n = self.zones_n + 1
-            self.servers[zone_name] = { id = zones_n, n = 0, list = {} }
+            self.servers[zone_name] = { id = self.zones_n, n = 0, list = {} }
         end
         self:connect(id, server)
     end
@@ -370,8 +368,35 @@ local function wait_epoch(self, epoch)
     end
 end
 
+local pool_object_methods = {
+    server_is_ok = server_is_ok,
+    merge_zones = merge_zones,
+    merge_tables = merge_tables,
+    monitor_fail = monitor_fail,
+    update_heartbeat = update_heartbeat,
+    connect = connect,
+    fill_table = fill_table,
+    enable_operations = enable_operations,
+    check_connection = check_connection,
+
+    len = len,
+    is_connected = is_connected,
+    wait_connection = wait_connection,
+    get_epoch = get_epoch,
+    wait_epoch = wait_epoch,
+    is_table_filled = is_table_filled,
+    wait_table_fill = wait_table_fill,
+
+    -- public API
+    init = init,
+    one = one,
+    all = all,
+    zone_list = zone_list,
+    get_heartbeat = get_heartbeat,
+}
+
 local function new()
-    local pool_obj = {
+    return setmetatable({
         servers = {},
         servers_n = 0,
         zones_n = 0,
@@ -381,53 +406,29 @@ local function new()
         epoch_counter = 1,
         configuration = {},
 
+        -- global constants
         HEARTBEAT_TIMEOUT = HEARTBEAT_TIMEOUT,
         DEAD_TIMEOUT = DEAD_TIMEOUT,
         RECONNECT_AFTER = RECONNECT_AFTER,
 
-        server_is_ok = server_is_ok,
-        merge_zones = merge_zones,
+        -- background fibers
         monitor_fiber = monitor_fiber,
-        merge_tables = merge_tables,
-        monitor_fail = monitor_fail,
-        update_heartbeat = update_heartbeat,
         heartbeat_fiber = heartbeat_fiber,
-        connect = connect,
-        fill_table = fill_table,
-        enable_operations = enable_operations,
-        check_connection = check_connection,
 
-        zones = servers,
-        len = len,
-        is_connected = is_connected,
-        wait_connection = wait_connection,
-        get_epoch = get_epoch,
-        wait_epoch = wait_epoch,
-        is_table_filled = is_table_filled,
-        wait_table_fill = wait_table_fill,
-
-        _on_disconnect = _on_disconnect,
-        on_connfail = on_connfail,
+        -- callbacks available for set
         on_connected = on_connected,
         on_connected_one = on_connected_one,
+        on_disconnect = on_disconnect,
         on_disconnect_one = on_disconnect_one,
         on_disconnect_zone = on_disconnect_zone,
-        on_disconnect = on_disconnect,
         on_init = on_init,
-
-        init = init,
-        all = all,
-        one = one,
-        zone_list = zone_list,
-        get_heartbeat = get_heartbeat,
-    }
-    obj_count = obj_count + 1
-    return pool_obj
+        on_connfail = on_connfail,
+    }, {
+        __index = pool_object_methods
+    })
 end
 
-lib_obj = {
+return {
     new = new
 }
-
-return lib_obj
 -- vim: ts=4:sw=4:sts=4:et
