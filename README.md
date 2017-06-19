@@ -35,7 +35,7 @@ servers:
 
 ###example
 ```lua
-p = require('pool')
+p = require('connpool')
 
 -- create new pool
 pool = p.new()
