@@ -1,9 +1,9 @@
-# Connection-pool 
+# Connection pool
 [![Build Status](https://travis-ci.org/tarantool/connection-pool.svg?branch=master)](https://travis-ci.org/tarantool/connection-pool)
 
 Lua connection pool for tarantool net.box with network zones support.
 
-###api
+## API
 * `pool:init(cfg)` - init connection pool with given config
 * `pool:one(zone_id)`  - returns random active connection from given zone(can be nil)
 * `pool:all(zone_id)`  - returns all active connections from given zone(can be nil)
@@ -12,7 +12,7 @@ Lua connection pool for tarantool net.box with network zones support.
 
 if `zone_id` is nil - return connections from all zones
 
-###available callbacks
+## Available callbacks
 * `on_connected` - all nodes connected
 * `on_connected_one` - one node connected
 * `on_disconnect` - lost all connations in pool
@@ -21,7 +21,7 @@ if `zone_id` is nil - return connections from all zones
 * `on_connfail` - monitoring detected connection problem
 * `on_init` - init complete, monitoring fibers started
 
-###configuration
+## Configuration
 global:
 * `pool_name` - connection pool id
 * `monitor` - enable connection monitoring(by default `true`)
@@ -33,7 +33,7 @@ servers:
 * `password`
 * `zone` - network zone(can be nil)
 
-###example
+## Example
 ```lua
 p = require('connpool')
 
