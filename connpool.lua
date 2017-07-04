@@ -279,6 +279,7 @@ local function connect(self, id, server)
     local zone = self.servers[server.zone]
     log.info(' - %s - connecting...', server.uri)
     while true do
+        local arbiter = server.arbiter or false
         local login = server.login
         local pass = server.password
         if login == nil or pass == nil then
@@ -291,7 +292,7 @@ local function connect(self, id, server)
             local srv = {
                 uri = server.uri, conn = conn,
                 login = login, password=pass,
-                id = id
+                id = id, arbiter = arbiter
             }
             zone.n = zone.n + 1
             zone.list[zone.n] = srv
