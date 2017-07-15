@@ -401,6 +401,7 @@ local function init(self, cfg)
 
         local login = server.login
         local pass = server.password
+        local arbiter = server.arbiter or false
 
         if login == nil or pass == nil then
             login = self.configuration.login
