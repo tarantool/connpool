@@ -50,7 +50,19 @@ end
 
 
 local function server_is_ok(self, srv, dead)
-    return not srv.ignore and (srv.conn:is_connected() or dead)
+    if srv.ignore then
+        return false
+    end
+
+    if dead then
+        return true
+    end
+
+    if srv.conn == nil then
+        return false
+    end
+
+    return srv.conn:is_connected()
 end
 
 local function merge_zones(self)
@@ -124,31 +136,33 @@ local function monitor_fiber(self)
     while true do
         i = i + 1
         local server = self:one(nil, true)
-        local uri = server.uri
-        local dead = false
-        for k, v in pairs(self.heartbeat_state) do
-            -- true only if there is stuff in heartbeat_state
-            if k ~= uri then
-                dead = true
-                log.debug("monitoring: %s", uri)
-                break
-            end
-        end
-        for k, v in pairs(self.heartbeat_state) do
-            -- kill only if DEAD_TIMEOUT become in all servers
-            if k ~= uri and (v[uri] == nil or v[uri].try < self.DEAD_TIMEOUT) then
-                log.debug("%s is alive", uri)
-                dead = false
-                break
-            end
-        end
 
-        if dead then
-            server.conn:close()
-            server.ignore = true
-            self.heartbeat_state[uri] = nil
-            self.epoch_counter = self.epoch_counter + 1
-            _on_disconnect(self, server)
+        if server ~= nil then
+            local uri = server.uri
+            local dead = false
+            for k, v in pairs(self.heartbeat_state) do
+                -- true only if there is stuff in heartbeat_state
+                if k ~= uri then
+                    dead = true
+                    log.debug("monitoring: %s", uri)
+                    break
+                end
+            end
+            for k, v in pairs(self.heartbeat_state) do
+                -- kill only if DEAD_TIMEOUT become in all servers
+                if k ~= uri and (v[uri] == nil or v[uri].try < self.DEAD_TIMEOUT) then
+                    log.debug("%s is alive", uri)
+                    dead = false
+                    break
+                end
+            end
+
+            if dead then
+                server.conn:close()
+                server.conn = nil
+                self.epoch_counter = self.epoch_counter + 1
+                _on_disconnect(self, server)
+            end
         end
         fiber.sleep(math.random(100)/1000)
     end
@@ -186,6 +200,10 @@ end
 -- heartbeat table and opinions management
 local function update_heartbeat(self, uri, response, status)
     -- set or update opinions and timestamp
+    if self.self_server == nil then
+        return
+    end
+
     local opinion = self.heartbeat_state[self.self_server.uri]
     if not status then
         opinion[uri].try = opinion[uri].try + 1
@@ -206,18 +224,33 @@ local function heartbeat_fiber(self)
         i = i + 1
         -- random select node to check
         local server = self:one(nil, true)
-        local uri = server.uri
-        log.debug("checking %s", uri)
 
-        -- get heartbeat from node
-        local response
-        local status, err_state = pcall(function()
-            local expr = "return heartbeat('" .. self.configuration.pool_name .. "')"
-            response = server.conn:timeout(self.HEARTBEAT_TIMEOUT):eval(expr)
-        end)
-        -- update local heartbeat table
-        self:update_heartbeat(uri, response, status)
-        log.debug("%s", yaml.encode(self.heartbeat_state))
+        if server ~= nil then
+            local uri = server.uri
+            log.debug("checking %s", uri)
+
+            if server.conn == nil then
+                for _, opinion in pairs(self.heartbeat_state[server.uri]) do
+                    opinion.ts = fiber.time()
+                    opinion.try = INFINITY_MIN
+                end
+
+                if self.self_server then
+                    self.heartbeat_state[self.self_server.uri][server.uri] = {
+                        ts = fiber.time(), try = INFINITY_MIN}
+                end
+            else
+                -- get heartbeat from node
+                local response
+                local status, err_state = pcall(function()
+                        local expr = "return heartbeat('" .. self.configuration.pool_name .. "')"
+                        response = server.conn:timeout(self.HEARTBEAT_TIMEOUT):eval(expr)
+                end)
+                -- update local heartbeat table
+                self:update_heartbeat(uri, response, status)
+                log.debug("%s", yaml.encode(self.heartbeat_state))
+            end
+        end
         -- randomized wait for next check
         fiber.sleep(math.random(1000)/1000)
     end
@@ -308,6 +341,42 @@ local function connect(self, id, server)
     end
 end
 
+local function connection_fiber(self)
+    while true do
+        for _, zone in pairs(self.servers) do
+            for _, server in pairs(zone.list) do
+
+                if server.conn == nil or not server.conn:is_connected() then
+                    server.conn = nil
+
+                    local uri = ""
+
+                    if server.password == "" then
+                        uri = string.format("%s@%s", server.login, server.uri)
+                    else
+                        uri = string.format("%s:%s@%s", server.login, server.password, server.uri)
+                    end
+
+                    local conn = remote:new(uri, { reconnect_after = self.RECONNECT_AFTER })
+                    if conn:ping() and self:check_connection(conn) then
+                        server.conn = conn
+                        server.conn_error = ""
+                        log.debug("connected to: " .. server.uri)
+
+                        if conn:eval("return box.info.server.uuid") == box.info.server.uuid then
+                            log.info("setting self_server to " .. server.uri)
+                            self.self_server = server
+                        end
+                    else
+                        server.conn_error = conn.error
+                    end
+                end
+            end
+        end
+        fiber.sleep(1)
+    end
+end
+
 -- connect with servers
 local function init(self, cfg)
     self.configuration = cfg
@@ -328,8 +397,25 @@ local function init(self, cfg)
             self.zones_n = self.zones_n + 1
             self.servers[zone_name] = { id = self.zones_n, n = 0, list = {} }
         end
-        self:connect(id, server)
+        local zone = self.servers[server.zone]
+
+        local login = server.login
+        local pass = server.password
+
+        if login == nil or pass == nil then
+            login = self.configuration.login
+            pass = self.configuration.password
+        end
+
+        local srv = {
+            uri = server.uri, conn = nil,
+            login = login, password=pass,
+            id = id, arbiter = arbiter
+        }
+        zone.n = zone.n + 1
+        zone.list[zone.n] = srv
     end
+
     self:on_connected()
     self:fill_table()
 
@@ -338,6 +424,7 @@ local function init(self, cfg)
         fiber.create(self.heartbeat_fiber, self)
         fiber.create(self.monitor_fiber, self)
     end
+    fiber.create(self.connection_fiber, self)
 
     self:enable_operations()
     self.init_complete = true
@@ -401,7 +488,7 @@ local function new()
         servers = {},
         servers_n = 0,
         zones_n = 0,
-        self_server = -1,
+        self_server = nil,
         heartbeat_state = {},
         init_complete = false,
         epoch_counter = 1,
@@ -415,6 +502,7 @@ local function new()
         -- background fibers
         monitor_fiber = monitor_fiber,
         heartbeat_fiber = heartbeat_fiber,
+        connection_fiber = connection_fiber,
 
         -- callbacks available for set
         on_connected = on_connected,
