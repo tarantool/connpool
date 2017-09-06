@@ -241,14 +241,15 @@ local function heartbeat_fiber(self)
                 end
             else
                 -- get heartbeat from node
-                local response
-                local status, err_state = pcall(function()
-                        local expr = "return heartbeat('" .. self.configuration.pool_name .. "')"
-                        response = server.conn:timeout(self.HEARTBEAT_TIMEOUT):eval(expr)
-                end)
-                -- update local heartbeat table
-                self:update_heartbeat(uri, response, status)
-                log.debug("%s", yaml.encode(self.heartbeat_state))
+                local expr = "return heartbeat(...)"
+                local args = { self.configuration.pool_name }
+                local opts = { timeout = self.HEARTBEAT_TIMEOUT }
+                local ok, resp = pcall(server.conn, server, expr, args, opts)
+                if ok then
+                    -- update local heartbeat table
+                    self:update_heartbeat(uri, resp, ok)
+                    log.debug("%s", yaml.encode(self.heartbeat_state))
+                end
             end
         end
         -- randomized wait for next check
