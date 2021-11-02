@@ -1,7 +1,7 @@
 package = 'connpool'
 version = '1.1.1-1'
 source  = {
-    url = 'git://github.com/tarantool/connpool.git',
+    url = 'git+https://github.com/tarantool/connpool.git',
     tag = '1.1.1',
 }
 description = {

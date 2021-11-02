@@ -1,7 +1,7 @@
 package = 'connpool'
 version = 'scm-1'
 source  = {
-    url    = 'git://github.com/tarantool/connpool.git',
+    url    = 'git+https://github.com/tarantool/connpool.git',
     branch = 'master',
 }
 description = {
